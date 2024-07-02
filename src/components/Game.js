@@ -11,8 +11,9 @@ const Game = () => {
     const [direction, setDirection] = useState({ x: 0, y: -1 });
     const [isGameOver, setIsGameOver] = useState(false);
     const [isGameStarted, setIsGameStarted] = useState(false);
+    const [isPaused, setIsPaused] = useState(false);
     const [canChangeDirection, setCanChangeDirection] = useState(true);
-    const [speed, setSpeed] = useState(200); // Default speed
+    const [speed, setSpeed] = useState(150); // Default speed
     const [score, setScore] = useState(0);
     const [highScore, setHighScore] = useState(0);
 
@@ -74,13 +75,18 @@ const Game = () => {
     };
 
     const handleKeyPress = (event) => {
+        if (event.key === ' ') {
+            setIsPaused(!isPaused);
+            return;
+        }
+
         if (!isGameStarted) {
             setIsGameStarted(true);
             setCanChangeDirection(true);
             setDirection({ x: 0, y: -1 });
         }
 
-        if (!canChangeDirection) return; // Prevent direction change if not allowed
+        if (!canChangeDirection || isPaused) return; // Prevent direction change if not allowed or paused
 
         let newDirection;
         switch (event.key) {
@@ -118,6 +124,7 @@ const Game = () => {
         setDirection({ x: 0, y: -1 });
         setIsGameOver(false);
         setIsGameStarted(false); // Ensure the game waits for an arrow key press
+        setIsPaused(false); // Reset pause state
         setCanChangeDirection(true); // Allow direction change at the start
         setScore(0); // Reset score
     };
@@ -125,7 +132,7 @@ const Game = () => {
     useEffect(() => {
         if (!isGameOver) {
             window.addEventListener('keydown', handleKeyPress);
-            const interval = isGameStarted ? setInterval(moveSnake, speed) : null;
+            const interval = isGameStarted && !isPaused ? setInterval(moveSnake, speed) : null;
             return () => {
                 window.removeEventListener('keydown', handleKeyPress);
                 if (interval) clearInterval(interval);
@@ -136,7 +143,7 @@ const Game = () => {
                 localStorage.setItem('highScore', score); // Save high score to localStorage
             }
         }
-    }, [snake, direction, isGameOver, speed, isGameStarted]);
+    }, [snake, direction, isGameOver, speed, isGameStarted, isPaused]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -164,6 +171,15 @@ const Game = () => {
             context.fillText('Press any arrow key to start', canvas.width / 2, canvas.height / 2);
         }
 
+        if (isPaused) {
+            context.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.fillStyle = 'white';
+            context.font = '30px Arial';
+            context.textAlign = 'center';
+            context.fillText('Paused', canvas.width / 2, canvas.height / 2);
+        }
+
         if (isGameOver) {
             context.fillStyle = 'rgba(0, 0, 0, 0.5)';
             context.fillRect(0, 0, canvas.width, canvas.height);
@@ -172,7 +188,7 @@ const Game = () => {
             context.textAlign = 'center';
             context.fillText('Game Over', canvas.width / 2, canvas.height / 2);
         }
-    }, [snake, food, isGameOver, isGameStarted]);
+    }, [snake, food, isGameOver, isGameStarted, isPaused]);
 
     return (
         <div style={{ textAlign: 'center' }}>
@@ -199,6 +215,11 @@ const Game = () => {
                 height="400"
                 style={{ border: '1px solid black', display: 'block', margin: '0 auto' }}
             />
+            {!isGameOver && (
+                <div style={{ marginTop: '20px' }}>
+                    <p>Click space to pause and unpause the game</p>
+                </div>
+            )}
             {isGameOver && (
                 <button onClick={restartGame} style={{ marginTop: '20px' }}>
                     Restart
